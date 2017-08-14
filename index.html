@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>HTML5 with storing files in IndexedDB</title>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <header class="header" role="banner">
+      <h1>HTML5 with storing files in IndexedDB</h1>
+    </header>
+
+    <div class="main">
+      <article class="main-content" role="main">
+
+        <h2>Figure</h2>
+
+        <img id="img1" alt="">
+        <img id="img2" alt="">
+        <img id="img3" alt="">
+      </article>
+    </div>
+
+  </div>
+
+  <script>
+    // IndexedDB
+    var indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.OIndexedDB || window.msIndexedDB,
+      IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.OIDBTransaction || window.msIDBTransaction,
+        // 兼用数据库类型
+      dbVersion = 1.0;  // 数据库版本号
+
+    // Create/open database
+    var request = indexedDB.open("ImgFiles", dbVersion),  // 打开数据库
+      db,
+        // 创建新的存储空间  传入IDBDatabase对象  在onupgradeneeded事件中调用
+        // 第一次open的success事件处于version_change事务中 这个时候不能createObjectStore
+       createObjectStore = function (dataBase) {
+        // Create an objectStore
+        console.log("Creating objectStore 创建对象存储")
+        dataBase.createObjectStore("IMG");    // 创建存储空间 IMG
+       };
+    // 数据库错误的事件
+    request.onerror = function (event) {
+      console.log("数据库错误 Error creating/accessing IndexedDB database");
+    };
+    // 数据库创建成功后的事件
+    request.onsuccess = function (event) {
+      console.log(" 数据库创建成功 Success creating/accessing IndexedDB database");
+      db = request.result;    // IDBDatabase对象
+      db.onerror = function (event) {
+        console.log("Error creating/accessing IndexedDB database");
+      };
+
+      // Interim solution for Google Chrome to create an objectStore. Will be deprecated
+      show()
+    }
+
+    // For future use. Currently only in latest Firefox versions
+    // 打开的数据库的版本号和已经存在的数据库版本号不一致的时候调用。
+    request.onupgradeneeded = function (event) {
+        // 传入IDBDatebase对象 创建存储空间
+      createObjectStore(event.target.result);
+    };
+
+    //  显示数据库中所存储的图片数据
+    show = function () {
+        // 判断常量 IDBTransaction.READ_WRITE是否存在  并设置事务的操作模式
+      var readWriteMode = typeof IDBTransaction.READ_WRITE == "undefined" ? "readwrite" : IDBTransaction.READ_WRITE;
+      // 对数据库进行操作  需要开启一个事务 事务来自数据库对象
+      var transaction = db.transaction(["IMG"], readWriteMode);
+
+      getDataByKey(db, "IMG", 'image/earth.jpg', 'img1');
+      getDataByKey(db, "IMG", 'image/bigben.jpg', 'img2');
+      getDataByKey(db, "IMG", 'image/coffee.jpg', 'img3');
+
+    };
+
+    // 从数据库中获取数据
+    // 参数 IDBDatebase对象 文档名 键值 图片路径
+    function getDataByKey(db, storeName, value, src) {
+        // 判断常量 IDBTransaction.READ_WRITE是否存在  并设置事务的操作模式
+      var readWriteMode = typeof IDBTransaction.READ_WRITE == "undefined" ? "readwrite" : IDBTransaction.READ_WRITE;
+        // 对数据库进行操作  需要开启一个事务 事务来自数据库对象
+        // 打开该事务 并使用该存储空间
+      var transaction = db.transaction(storeName, readWriteMode);
+      // 获取该存储空间
+      var store = transaction.objectStore(storeName);
+      //根据键取值
+      var request = store.get(value);
+
+      // 取值成功事件
+      request.onsuccess = function (e) {
+          debugger
+          // 取值成功后会有一个blob对象
+        var imgFile = e.target.result;  // blob对象
+          // 如有该Blob对象 则调用imgFile
+        if (imgFile) {
+            debugger
+            // 传入blob对象 dom对象
+          showImg(imgFile, src);
+        } else {
+          getByRequest(value, src);
+        }
+        console.log(value);
+
+      };
+      request.onerror = function (e) {
+          console.log(e)
+          debugger
+      }
+    }
+
+    // 传入blob对象 显示图片
+    function showImg(imgFile, src) {
+      console.log("showImg" + imgFile);
+
+      // Get window.URL object
+      var URL = window.URL || window.webkitURL;
+
+      // Create and revoke ObjectURL
+        // 利用blob对象 创建一个URL对象
+      var imgURL = URL.createObjectURL(imgFile);
+
+      // Set img src to ObjectURL
+        // 获取图片的dom对象 并将URL设置为该对象的SRC
+      var imgElephant = document.getElementById(src);
+      imgElephant.setAttribute("src", imgURL);
+
+      // Revoking ObjectURL
+        // 当图片加载完成后
+        // 使用URL.revokeObjectURL() 方法释放之前创建的URL对象
+      imgElephant.onload = function () {
+          debugger
+        window.URL.revokeObjectURL(this.src);
+      }
+    }
+
+    // 当数据库无数据时
+    function getByRequest(value, src) {
+      console.log('not ok ');
+      // Create XHR
+      var xhr = new XMLHttpRequest(), // 创建 XMLHttpRequest 对象   目前请求项目自身
+          blob;
+      xhr.open("GET", value, true);   // 在项目中get请求该图片
+      // Set the responseType to blob
+        // 将响应类型设为blob类型
+      xhr.responseType = "blob";
+      // 响应加载
+      xhr.addEventListener("load", function () {
+          // 响应为200 请求完成
+        if (xhr.status === 200) {
+          console.log("Image retrieved");
+
+          // Blob as response
+          blob = xhr.response;  // blob对象为响应后的对象
+          console.log("Blob:" + blob);
+
+          save(blob, value);
+
+          showImg(blob, src);
+        }
+      }, false);
+      // Send XHR
+      xhr.send();
+    }
+
+    //根据blob对象为keyPath  更新键值
+    function save(blob, value) {
+      // Put the received blob into IndexedDB
+      var readWriteMode = typeof IDBTransaction.READ_WRITE == "undefined" ? "readwrite" : IDBTransaction.READ_WRITE;
+      var transaction = db.transaction(["IMG"], readWriteMode);
+      transaction.objectStore("IMG").put(blob, value);
+    }
+  </script>
+
+</body>
+
+</html>

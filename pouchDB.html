@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="PouchDB.js"></script>
+    <title>Title</title>
+</head>
+<body>
+<div class="container">
+
+    <header class="header" role="banner">
+        <h1>HTML5 with storing files in IndexedDB</h1>
+    </header>
+    <div class="main">
+        <article class="main-content" role="main">
+
+            <h2>Figure</h2>
+
+            <img id="img1" alt="">
+            <img id="img2" alt="">
+            <img id="img3" alt="" width="100px" height="200px">
+        </article>
+    </div>
+
+</div>
+<script src="IMGDB.js"></script>
+<script>
+    const DB = new PouchDB('IMG');  //  打开或者创建imgData数据库
+    var ary = [
+        {
+            pouchId:'image/earth.jpg',
+            src:'img1',
+            bg:''
+        },
+        {
+            pouchId:'image/bigben.jpg',
+            src:'img2',
+            bg:''
+        },
+        {
+            pouchId:'image/coffee.jpg',
+            src:'img3',
+            bg:''
+        }
+    ]
+addTodo(DB,ary)
+/*addTodo(DB,'image/bigben.jpg','img2')
+addTodo(DB,'image/coffee.jpg','img3','1')*/
+</script>
+
+</body>
+</html>
